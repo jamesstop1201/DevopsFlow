@@ -3,3 +3,4 @@ infra-terraform/management/.terraform.lock.hcl
 infra-terraform/management/*.tfstate
 infra-terraform/environments/dev/.terraform
 infra-terraform/environments/dev/*.tfstate
+infra-terraform/environments/dev/.terraform.lock.hcl
