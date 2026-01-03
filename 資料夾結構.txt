@@ -1,0 +1,51 @@
+.
+├── .github/                      # GitHub 整合 (觸發 Jenkins Pipeline)
+│   └── workflows/
+│       └── ci-cd.yml
+│
+├── infra-terraform/              # 【IaC 層】基礎設施即代碼
+│   ├── management/               # <--- 步驟一：建立 S3 & DynamoDB (引導啟動)
+│   │   ├── main.tf               # 建立用於存儲 tfstate 的 S3 與鎖定的 Table
+│   │   └── outputs.tf
+│   ├── modules/                  # 可重用元件模組
+│   │   ├── networking-vpc/       # VPC, Subnets (Public/Private), NAT Gateway
+│   │   ├── compute-jenkins/      # Jenkins EC2 實例, IAM Roles (Instance Profile)
+│   │   ├── cluster-eks/          # EKS Control Plane, Node Groups (Auto Scaling 設定)
+│   │   ├── container-registry/   # AWS ECR Repository (開啟 Scan on Push)
+│   │   └── dns-route53/          # Route 53 A 紀錄 (指向 ALB)
+│   └── environments/
+│       └── dev/                  # <--- 步驟二：開發環境入口
+│           ├── main.tf           # 配置 backend "s3" 並調用模組
+│           ├── variables.tf
+│           ├── terraform.tfvars  # 存放 AWS Region, Domain 等變數
+│           └── outputs.tf
+│
+├── ansible-automation/           # 【配置管理層】伺服器初始化
+│   ├── inventory/                # 存放 Jenkins EC2 IP
+│   │   └── hosts.ini
+│   ├── roles/                    # 模組化安裝腳本
+│   │   ├── docker-setup/         # 安裝 Docker Engine
+│   │   └── jenkins-init/         # 安裝 Java 17, Jenkins, Kubectl, AWS CLI
+│   └── site.yml                  # 主要執行的 Playbook
+│
+├── docker/                       # 【容器鏡像層】
+│   └── app/
+│       ├── Dockerfile            # 以 Nginx 為底層包裝 Mini Finance
+│       └── 2135_mini_finance/    # 你的靜態網頁原始碼路徑
+│
+├── kubernetes-manifests/         # 【K8s 運維層】
+│   ├── deployments/              
+│   │   ├── web-deploy.yaml       # 定義 Pod 副本與 ECR 鏡像路徑
+│   │   └── web-hpa.yaml          # <--- 新增：Auto Scaling (Pod 層級) 規則
+│   ├── services/                 # 定義內部負載平衡 (ClusterIP)
+│   │   └── web-service.yaml
+│   └── ingress/                  # 定義 ALB 入口與 HTTP 轉發規則
+│       └── web-ingress.yaml      # (僅配置 Port 80)
+│
+├── scripts/                      # 【工具與測試層】
+│   └── scaling-test.sh           # SQE 必備：壓力測試與自動擴展驗證腳本
+│
+├── Jenkinsfile                   # Jenkins 流水線定義 (Groovy)
+├── .gitignore                    # 資安防護 (排除 .tfstate, .pem, .tfvars)
+├── README.md                     # 專案架構圖與詳細施行手冊
+└── LICENSE                       # MIT License
