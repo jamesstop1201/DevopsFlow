@@ -1,0 +1,2 @@
+infra-terraform/management/.terraform
+infra-terraform/management/.terraform.lock.hcl
