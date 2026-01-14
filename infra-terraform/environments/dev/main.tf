@@ -34,3 +34,11 @@ module "networking" {
   public_subnets  = var.public_subnets
   private_subnets = var.private_subnets
 }
+
+output "vpc_id" {
+  value = module.networking.vpc_id
+}
+
+output "public_subnet_ids" {
+  value = module.networking.public_subnet_ids
+}
