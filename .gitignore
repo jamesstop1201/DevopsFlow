@@ -1,6 +1,5 @@
-infra-terraform/management/.terraform
-infra-terraform/management/.terraform.lock.hcl
-infra-terraform/management/*.tfstate
-infra-terraform/environments/dev/.terraform
-infra-terraform/environments/dev/*.tfstate
-infra-terraform/environments/dev/.terraform.lock.hcl
+.terraform/
+docker/app/2135_mini_finance
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
