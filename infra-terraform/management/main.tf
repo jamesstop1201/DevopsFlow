@@ -10,9 +10,9 @@ resource "random_id" "bucket_suffix" {
 # 2. 建立 S3 儲存桶
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "mini-finance-tfstate-${random_id.bucket_suffix.hex}"
-
+  force_destroy = true # 若要刪除桶時一併刪除內部物件，否則預設為 false 無法刪除有物件的桶(因作品為求方便使用)
   lifecycle {
-    prevent_destroy = true # 防止誤刪這個核心儲存桶
+    # prevent_destroy = true # 防止誤刪這個核心儲存桶
   }
 }
 
