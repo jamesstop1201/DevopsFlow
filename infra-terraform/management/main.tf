@@ -34,8 +34,3 @@ resource "aws_dynamodb_table" "terraform_locks" {
     type = "S" # 因為他寫入字串類型是string，故用其他類型會因為船入閣是不對而報錯
   }
 }
-
-# 輸出 S3 名稱
-output "state_bucket_name" {
-  value = aws_s3_bucket.terraform_state.bucket
-}

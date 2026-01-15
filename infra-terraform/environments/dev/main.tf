@@ -35,14 +35,6 @@ module "networking" {
   private_subnets = var.private_subnets
 }
 
-output "vpc_id" {
-  value = module.networking.vpc_id
-}
-
-output "public_subnet_ids" {
-  value = module.networking.public_subnet_ids
-}
-
 # 建立 ECR
 module "ecr" {
   source       = "../../modules/artifact-registry"
@@ -56,9 +48,4 @@ module "jenkins" {
   vpc_id       = module.networking.vpc_id       
   subnet_id    = module.networking.public_subnet_ids[0] # 放在第一個公有子網
   instance_type = "t3.medium" # 依照手冊建議的規格
-}
-
-output "jenkins_public_ip" {
-  value       = module.jenkins.public_ip
-  description = "The public IP address of the Jenkins server"
 }
