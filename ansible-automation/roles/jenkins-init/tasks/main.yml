@@ -31,3 +31,8 @@
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
   args:
     creates: /usr/local/bin/kubectl
+
+- name: 設定 AWS 預設區域
+  become: true
+  shell: aws configure set region us-east-1
+  # become_user: jenkins

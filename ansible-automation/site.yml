@@ -2,6 +2,8 @@
 - name: 配置 Jenkins 與 Docker 環境
   hosts: jenkins
   become: true  # 使用 sudo 權限
+  vars:
+    aws_region: "us-east-1"
   roles:
     - docker-setup
     - jenkins-init
