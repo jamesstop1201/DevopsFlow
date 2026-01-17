@@ -1,0 +1,33 @@
+---
+- name: 安裝 Java 17 (Jenkins 運行環境)
+  apt:
+    name: openjdk-17-jdk
+    state: present
+
+- name: 下載 Jenkins GPG Key
+  apt_key:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    state: present
+
+- name: 加入 Jenkins 來源清單
+  apt_repository:
+    repo: "deb https://pkg.jenkins.io/debian-stable binary/"
+    state: present
+
+- name: 安裝 Jenkins
+  apt:
+    name: jenkins
+    state: present
+    update_cache: yes
+
+- name: 安裝 AWS CLI (為了推送到 ECR)
+  apt:
+    name: awscli
+    state: present
+
+- name: 安裝 kubectl (為了部署到 EKS)
+  shell: |
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+  args:
+    creates: /usr/local/bin/kubectl

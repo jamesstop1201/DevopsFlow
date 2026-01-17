@@ -1,0 +1,7 @@
+---
+- name: 配置 Jenkins 與 Docker 環境
+  hosts: jenkins
+  become: true  # 使用 sudo 權限
+  roles:
+    - docker-setup
+    - jenkins-init

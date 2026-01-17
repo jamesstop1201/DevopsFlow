@@ -1,0 +1,22 @@
+---
+- name: 安裝 Docker 必要套件
+  apt:
+    name: ["apt-transport-https", "ca-certificates", "curl", "software-properties-common"]
+    update_cache: yes
+
+- name: 下載並安裝 Docker
+  apt:
+    name: docker.io
+    state: present
+
+- name: 啟動 Docker 服務
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: 將 ubuntu 使用者加入 docker 群組 (方便後續操作)
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
