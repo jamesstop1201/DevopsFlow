@@ -41,11 +41,19 @@ module "ecr" {
   project_name = var.project_name
 }
 
+# 定義 AWS Key Pair 資源
+resource "aws_key_pair" "jenkins_key" {
+  key_name   = var.ssh_key_name
+  public_key = file("~/.ssh/${var.ssh_key_name}.pub") # 讀取你剛才產生的公鑰內容
+}
+
 # 建立 Jenkins
 module "jenkins" {
-  source       = "../../modules/compute-jenkins"
-  project_name = var.project_name
-  vpc_id       = module.networking.vpc_id       
-  subnet_id    = module.networking.public_subnet_ids[0] # 放在第一個公有子網
-  instance_type = "t3.medium" # 依照手冊建議的規格
+  source        = "../../modules/compute-jenkins"
+  project_name  = var.project_name
+  vpc_id        = module.networking.vpc_id
+  subnet_id     = module.networking.public_subnet_ids[0] # 放在第一個公有子網
+  instance_type = "t3.medium"                            # 依照手冊建議的規格
+  key_name      = aws_key_pair.jenkins_key.key_name
 }
+

@@ -19,3 +19,8 @@ variable "public_subnets" {
 variable "private_subnets" {
   type        = list(string)
 }
+
+variable "ssh_key_name" {
+  type        = string
+  description = "SSH key pair to use for the jenkins instance"
+}

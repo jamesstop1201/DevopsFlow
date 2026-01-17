@@ -5,3 +5,7 @@ variable "instance_type" {
   type = string
   default = "t3.medium" 
 }
+variable "key_name" {
+  type        = string
+  description = "SSH key pair to use for the jenkins instance"
+}

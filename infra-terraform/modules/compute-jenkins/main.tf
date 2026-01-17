@@ -84,6 +84,8 @@ resource "aws_instance" "jenkins_server" {
   # 綁定身分證
   iam_instance_profile = aws_iam_instance_profile.jenkins_profile.name
 
+  key_name      = var.key_name
+
   tags = {
     Name = "${var.project_name}-jenkins-server"
   }
