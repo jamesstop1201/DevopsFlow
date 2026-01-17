@@ -1,7 +1,7 @@
 terraform {
   # 這是將主專案連動到管理層 S3 
   backend "s3" {
-    bucket         = "mini-finance-tfstate-0a0bb188"
+    bucket         = "mini-finance-tfstate-34309834"
     key            = "dev/mini-finance/terraform.tfstate" # 在 S3 裡的存放路徑
     region         = "us-east-1"
     dynamodb_table = "terraform-state-locking" # 剛才建立的鎖
