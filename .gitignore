@@ -3,4 +3,3 @@
 *.tfstate
 *.tfstate.backup
 *.tfstate.lock.info
-  git config --global user.email "jamesstop1201@gmail.com"
