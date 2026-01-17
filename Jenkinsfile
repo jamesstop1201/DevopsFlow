@@ -25,7 +25,7 @@ pipeline {
 
         stage('Build & Push Image') {
             steps {
-                script 
+                script{ 
                     dir('docker/app'){
                         // 打包你的 Nginx 鏡像
                         sh "docker build -t ${REPO_NAME}:${IMAGE_TAG} -f Dockerfile ."
@@ -36,6 +36,7 @@ pipeline {
 
                         sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
                         sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                    }
                 }
             }
         }
