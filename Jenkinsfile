@@ -25,16 +25,17 @@ pipeline {
 
         stage('Build & Push Image') {
             steps {
-                script {
-                    // 打包你的 Nginx 鏡像
-                    sh "docker build -t ${REPO_NAME}:${IMAGE_TAG} -f docker/app/Dockerfile ."
-                    
-                    // 標記並推送到 ECR
-                    sh "docker tag ${REPO_NAME}:${IMAGE_TAG} ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
-                    sh "docker tag ${REPO_NAME}:${IMAGE_TAG} ${ECR_REGISTRY}/${REPO_NAME}:latest"
-                    
-                    sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
-                    sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                script 
+                    dir('docker/app'){
+                        // 打包你的 Nginx 鏡像
+                        sh "docker build -t ${REPO_NAME}:${IMAGE_TAG} -f Dockerfile ."
+
+                        // 標記並推送到 ECR
+                        sh "docker tag ${REPO_NAME}:${IMAGE_TAG} ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
+                        sh "docker tag ${REPO_NAME}:${IMAGE_TAG} ${ECR_REGISTRY}/${REPO_NAME}:latest"
+
+                        sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
+                        sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:latest"
                 }
             }
         }
