@@ -1,5 +1,6 @@
 .terraform/
-docker/app/2135_mini_finance
+# docker/app/2135_mini_finance
 *.tfstate
 *.tfstate.backup
 *.tfstate.lock.info
+  git config --global user.email "jamesstop1201@gmail.com"
