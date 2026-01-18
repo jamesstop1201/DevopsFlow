@@ -20,3 +20,8 @@
     name: ubuntu
     groups: docker
     append: yes
+
+- name: 暫時給予 docker.sock 權限 
+  file:
+    path: /var/run/docker.sock
+    mode: '0666'  

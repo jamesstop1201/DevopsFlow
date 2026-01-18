@@ -35,4 +35,15 @@
 - name: 設定 AWS 預設區域
   become: true
   shell: aws configure set region us-east-1
-  # become_user: jenkins
+
+- name: 確保 jenkins 使用者在 docker 群組中
+  user:
+    name: jenkins
+    groups: docker
+    append: yes
+
+- name: 重新啟動 Jenkins 服務
+  service:
+    name: jenkins
+    state: restarted
+    enabled: yes
