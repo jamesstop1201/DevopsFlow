@@ -1,0 +1,7 @@
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+      - name: mini-finance
+        image: ${IMAGE_URI}  # Jenkins 會在執行時替換此處
