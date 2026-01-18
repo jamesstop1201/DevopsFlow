@@ -1,7 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-finance-deploy
 spec:
   replicas: 2
+  selector:
+    matchLabels:
+      app: mini-finance
   template:
+    metadata:
+      labels:
+        app: mini-finance
     spec:
       containers:
       - name: mini-finance
-        image: ${IMAGE_URI}  # Jenkins 會在執行時替換此處
+        image: ${IMAGE_URI}
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        ports:
+        - containerPort: 80
