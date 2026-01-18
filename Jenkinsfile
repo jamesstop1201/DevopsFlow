@@ -49,8 +49,9 @@ pipeline {
                     sh "sed -i 's/v1alpha1/v1beta1/g' ~/.kube/config"
                     
                     // 替換變數並部署
-                    sh "envsubst < kubernetes-manifests/deployments/web-deploy.yaml > web-deploy-ready.yaml"
-                    sh "kubectl apply -f web-deploy-ready.yaml"
+                    sh "kubectl apply -f kubernetes-manifests/deployments/web-deploy.yaml"
+                    sh "kubectl set image deployment/mini-finance-deploy mini-finance=${env.IMAGE_URI}"
+                    sh "kubectl rollout status deployment/mini-finance-deploy"
                     }
             }
         }
