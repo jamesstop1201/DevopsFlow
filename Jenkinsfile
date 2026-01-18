@@ -50,6 +50,7 @@ pipeline {
                     
                     // 替換變數並部署
                     sh "kubectl apply -f kubernetes-manifests/deployments/web-deploy.yaml"
+                    sh "echo '目前的影像路徑是: ${env.IMAGE_URI}'"
                     sh "kubectl set image deployment/mini-finance-deploy mini-finance=${env.IMAGE_URI}"
                     sh "kubectl rollout status deployment/mini-finance-deploy"
                     }
