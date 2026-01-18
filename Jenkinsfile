@@ -49,9 +49,8 @@ pipeline {
                     sh "sed -i 's/v1alpha1/v1beta1/g' ~/.kube/config"
                     
                     // 替換變數並部署
-                    sh "sed -i 's|\\\${IMAGE_URI}|${env.IMAGE_URI}|g' kubernetes-manifests/deployments/web-deploy.yaml"
-                    // sh "kubectl apply -f kubernetes-manifests/services/"
-                    sh "kubectl apply -f kubernetes-manifests/deployments/"
+                    sh "envsubst < kubernetes-manifests/deployments/web-deploy.yaml > web-deploy-ready.yaml"
+                    sh "kubectl apply -f web-deploy-ready.yaml"
                     }
             }
         }
