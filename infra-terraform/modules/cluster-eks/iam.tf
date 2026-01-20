@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 resource "aws_iam_role" "cluster" {
   name = "${var.project_name}-eks-cluster-role"
 
@@ -60,10 +62,30 @@ resource "aws_iam_role_policy" "jenkins_eks_access" {
         Action = [
           "eks:DescribeCluster",
           "eks:ListClusters",
-          "eks:AccessKubernetesApi"
+          "eks:AccessKubernetesApi",
+          "eks:ListAccessEntries",      
+          "eks:DescribeAccessEntry",
+          "eks:ListAssociatedAccessPolicies"
         ]
         Resource = "*"
       }
     ]
   })
+}
+
+# 1. 建立 Access Entry
+resource "aws_eks_access_entry" "jenkins" {
+  cluster_name      = aws_eks_cluster.this.name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.jenkins_role_name}"
+  type              = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "jenkins_admin" {
+  cluster_name  = aws_eks_cluster.this.name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_eks_access_entry.jenkins.principal_arn
+
+  access_scope {
+    type = "cluster"
+  }
 }
