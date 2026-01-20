@@ -20,10 +20,29 @@
     state: present
     update_cache: yes
 
-- name: 安裝 AWS CLI (為了推送到 ECR)
+- name: 安裝解壓縮套件 unzip
   apt:
-    name: awscli
+    name: unzip
     state: present
+
+# - name: 安裝 AWS CLI (為了推送到 ECR)
+#   apt:
+#     name: awscli
+#     state: present
+
+- name: Install AWS CLI v2
+  unarchive:
+    src: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+    dest: /tmp
+    remote_src: yes
+
+- name: Run AWS CLI installer
+  command: /tmp/aws/install --update
+
+- command: aws --version
+  register: aws_ver
+
+- debug: var=aws_ver.stdout
 
 - name: 安裝 kubectl (為了部署到 EKS)
   shell: |
