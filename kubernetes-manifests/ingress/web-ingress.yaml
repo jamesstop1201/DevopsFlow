@@ -4,7 +4,7 @@ metadata:
   name: mini-finance-ingress
   annotations:
     # 這是關鍵：告訴 EKS 使用 AWS Load Balancer Controller 來建立 ALB
-    kubernetes.io/ingress.class: alb
+    spec.ingressClassName: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
 spec:
