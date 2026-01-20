@@ -6,6 +6,10 @@ resource "aws_eks_cluster" "this" {
   vpc_config {
     subnet_ids = var.public_subnets
   }
+  access_config {
+    authentication_mode = var.authentication_mode
+  }
+  depends_on = [aws_iam_role_policy_attachment.eks_cluster_policy]
 }
 
 # 2. EKS Node Group 
