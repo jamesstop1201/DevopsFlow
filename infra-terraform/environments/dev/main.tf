@@ -1,7 +1,7 @@
 terraform {
   # 這是將主專案連動到管理層 S3 
   backend "s3" {
-    bucket         = "mini-finance-tfstate-34309834"
+    bucket         = "mini-finance-tfstate-5d449a72"
     key            = "dev/mini-finance/terraform.tfstate" # 在 S3 裡的存放路徑
     region         = "us-east-1"
     dynamodb_table = "terraform-state-locking" # 剛才建立的鎖
@@ -57,3 +57,14 @@ module "jenkins" {
   key_name      = aws_key_pair.jenkins_key.key_name
 }
 
+module "eks" {
+  source         = "../../modules/cluster-eks"
+  project_name   = var.project_name
+  vpc_id         = module.networking.vpc_id
+  public_subnets = module.networking.public_subnet_ids
+  jenkins_role_name = module.jenkins.jenkins_role_name
+  instance_types = ["t3.medium"]
+  desired_size   = 2
+  max_size       = 3
+  min_size       = 1
+}
