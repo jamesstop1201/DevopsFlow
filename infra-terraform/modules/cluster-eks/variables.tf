@@ -40,3 +40,9 @@ variable "jenkins_role_name" {
   description = "Jenkins 伺服器使用的 IAM Role 名稱"
   type        = string
 }
+
+variable "authentication_mode" {
+  description = "The authentication mode for the cluster. Valid values are CONFIG_MAP, API or API_AND_CONFIG_MAP"
+  type        = string
+  default     = "API_AND_CONFIG_MAP"
+}
