@@ -2,18 +2,16 @@ pipeline {
     agent any
     
     environment {
-        // 請確保這裡換成你 Terraform 輸出的實際 ECR 網址
         ECR_REGISTRY = "514015205949.dkr.ecr.us-east-1.amazonaws.com"
         REPO_NAME    = "mini-finance-app"
-        IMAGE_TAG    = "${env.BUILD_NUMBER}"
         AWS_REGION   = "us-east-1"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // 確保分支名稱正確
-                git branch: 'dev', url: 'https://github.com/jamesstop1201/DevopsFlow.git'
+                // 使用 checkout scm 自動抓取觸發的分支 (main 或 dev)
+                checkout scm
             }
         }
 
@@ -25,37 +23,64 @@ pipeline {
 
         stage('Build & Push Image') {
             steps {
-                script{ 
+                script { 
                     dir('docker/app'){
-                        // 打包你的 Nginx 鏡像
-                        sh "docker build -t ${REPO_NAME}:${IMAGE_TAG} -f Dockerfile ."
+                        // 區分 dev 和 main 的 Tag，防止覆蓋 latest
+                        def isMainBranch = (env.BRANCH_NAME == 'main')
+                        
+                        // 設定 Tag 名稱：main 用 v-123, dev 用 dev-123
+                        def currentTag = isMainBranch ? "v-${env.BUILD_NUMBER}" : "dev-${env.BUILD_NUMBER}"
+                        
+                        echo "目前分支: ${env.BRANCH_NAME}, 準備建置 Tag: ${currentTag}"
 
-                        // 標記並推送到 ECR
-                        sh "docker tag ${REPO_NAME}:${IMAGE_TAG} ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
-                        sh "docker tag ${REPO_NAME}:${IMAGE_TAG} ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                        // 1. 建置 Docker Image
+                        sh "docker build -t ${REPO_NAME}:${currentTag} -f Dockerfile ."
 
-                        sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${IMAGE_TAG}"
-                        sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                        // 2. 推送帶有版號的 Image (dev 和 main 都會推這個)
+                        sh "docker tag ${REPO_NAME}:${currentTag} ${ECR_REGISTRY}/${REPO_NAME}:${currentTag}"
+                        sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${currentTag}"
+
+                        // 3. 只有 main 分支才更新 'latest' 標籤
+                        if (isMainBranch) {
+                            echo "這是 main 分支，更新 latest 標籤..."
+                            sh "docker tag ${REPO_NAME}:${currentTag} ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                            sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                        } else {
+                            echo "這是 dev 分支，跳過推送 latest 標籤。"
+                        }
+                        
+                        // 將 Tag 存入環境變數供後續 Deploy 使用
+                        env.DEPLOY_TAG = currentTag
                     }
                 }
             }
         }
 
         stage('Deploy to EKS') {
+            // 【修改 3】核心需求：只有 main 分支才執行部署
+            when {
+                branch 'main'
+            }
             steps {
                 script {
-                    def fullImageUri = "${env.ECR_REGISTRY}/${env.REPO_NAME}:${env.BUILD_NUMBER}"
-                    echo "Debug: 準備部署的影像為 ${fullImageUri}"
-                    // 修正 Jenkins 帳號的 kubeconfig 格式
+                    def fullImageUri = "${env.ECR_REGISTRY}/${env.REPO_NAME}:${env.DEPLOY_TAG}"
+                    echo "Debug: 正在部署正式環境 (Main Branch)..."
+                    echo "使用影像: ${fullImageUri}"
+                    
+                    // 修正 Jenkins 帳號的 kubeconfig
                     sh "aws eks update-kubeconfig --region us-east-1 --name mini-finance-cluster"
+                    // 確保 API 版本相容性
                     sh "sed -i 's/v1alpha1/v1beta1/g' ~/.kube/config"
                     
-                    // 替換變數並部署
+                    // 套用 K8s 設定
                     sh "kubectl apply -f kubernetes-manifests/deployments/web-deploy.yaml"
-                    sh "echo '目前的影像路徑是: ${fullImageUri}'"
+                    
+                    // 滾動更新 Image
                     sh "kubectl set image deployment/mini-finance-deploy mini-finance=${fullImageUri}"
+                    
+                    // 等待部署完成
                     sh "kubectl rollout status deployment/mini-finance-deploy"
-                    }
+                }
             }
         }
     }
