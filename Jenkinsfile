@@ -25,32 +25,57 @@ pipeline {
             steps {
                 script { 
                     dir('docker/app'){
-                        // 區分 dev 和 main 的 Tag，防止覆蓋 latest
-                        def isMainBranch = (env.BRANCH_NAME == 'main')
-                        
-                        // 設定 Tag 名稱：main 用 v-123, dev 用 dev-123
-                        def currentTag = isMainBranch ? "v-${env.BUILD_NUMBER}" : "dev-${env.BUILD_NUMBER}"
-                        
-                        echo "目前分支: ${env.BRANCH_NAME}, 準備建置 Tag: ${currentTag}"
+                        def branch = env.BRANCH_NAME ?: "unknown"
+                        echo "偵測到目前分支為: ${branch}"
+                        // 重新定義邏輯
+                        if (branch == 'main') {
+                            def mainTag = "v-${env.BUILD_NUMBER}"
+                            echo "執行 Main 分支流程: Tag 為 ${mainTag} 並更新 latest"
+                    
+                            sh "docker build -t ${REPO_NAME}:${mainTag} ."
+                            sh "docker tag ${REPO_NAME}:${mainTag} ${ECR_REGISTRY}/${REPO_NAME}:${mainTag}"
+                            sh "docker tag ${REPO_NAME}:${mainTag} ${ECR_REGISTRY}/${REPO_NAME}:latest"
 
-                        // 1. 建置 Docker Image
-                        sh "docker build -t ${REPO_NAME}:${currentTag} -f Dockerfile ."
-
-                        // 2. 推送帶有版號的 Image (dev 和 main 都會推這個)
-                        sh "docker tag ${REPO_NAME}:${currentTag} ${ECR_REGISTRY}/${REPO_NAME}:${currentTag}"
-                        sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${currentTag}"
-
-                        // 3. 只有 main 分支才更新 'latest' 標籤
-                        if (isMainBranch) {
-                            echo "這是 main 分支，更新 latest 標籤..."
-                            sh "docker tag ${REPO_NAME}:${currentTag} ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                            sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${mainTag}"
                             sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:latest"
-                        } else {
-                            echo "這是 dev 分支，跳過推送 latest 標籤。"
                         }
+                        else if (branch == 'dev') {
+                            def devTag = "dev-${env.BUILD_NUMBER}"
+                            echo "執行 Dev 分支流程: 僅 Tag 為 ${devTag}"
+                    
+                            sh "docker build -t ${REPO_NAME}:${devTag} ."
+                            sh "docker tag ${REPO_NAME}:${devTag} ${ECR_REGISTRY}/${REPO_NAME}:${devTag}"
+
+                            sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${devTag}"
+                        } 
+
+
+                        // // 區分 dev 和 main 的 Tag，防止覆蓋 latest
+                        // def isMainBranch = (env.BRANCH_NAME == 'main')
                         
-                        // 將 Tag 存入環境變數供後續 Deploy 使用
-                        env.DEPLOY_TAG = currentTag
+                        // // 設定 Tag 名稱：main 用 v-123, dev 用 dev-123
+                        // def currentTag = isMainBranch ? "v-${env.BUILD_NUMBER}" : "dev-${env.BUILD_NUMBER}"
+                        
+                        // echo "目前分支: ${env.BRANCH_NAME}, 準備建置 Tag: ${currentTag}"
+
+                        // // 1. 建置 Docker Image
+                        // sh "docker build -t ${REPO_NAME}:${currentTag} -f Dockerfile ."
+
+                        // // 2. 推送帶有版號的 Image (dev 和 main 都會推這個)
+                        // sh "docker tag ${REPO_NAME}:${currentTag} ${ECR_REGISTRY}/${REPO_NAME}:${currentTag}"
+                        // sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${currentTag}"
+
+                        // // 3. 只有 main 分支才更新 'latest' 標籤
+                        // if (isMainBranch) {
+                        //     echo "這是 main 分支，更新 latest 標籤..."
+                        //     sh "docker tag ${REPO_NAME}:${currentTag} ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                        //     sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                        // } else {
+                        //     echo "這是 dev 分支，跳過推送 latest 標籤。"
+                        // }
+                        
+                        // // 將 Tag 存入環境變數供後續 Deploy 使用
+                        // env.DEPLOY_TAG = currentTag
                     }
                 }
             }
