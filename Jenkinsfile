@@ -34,9 +34,9 @@ pipeline {
                     
                             sh "docker build -t ${REPO_NAME}:${env.DEPLOY_TAG} ."
                             sh "docker tag ${REPO_NAME}:${env.DEPLOY_TAG} ${ECR_REGISTRY}/${REPO_NAME}:${env.DEPLOY_TAG}"
-                            sh "docker tag ${REPO_NAME}:${mainTag} ${ECR_REGISTRY}/${REPO_NAME}:latest"
+                            sh "docker tag ${REPO_NAME}:${env.DEPLOY_TAG} ${ECR_REGISTRY}/${REPO_NAME}:latest"
 
-                            sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${mainTag}"
+                            sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${env.DEPLOY_TAG}"
                             sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:latest"
                         }
                         else if (branch == 'dev') {
