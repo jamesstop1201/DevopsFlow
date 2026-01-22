@@ -61,3 +61,29 @@
 - name: 設定 AWS 預設區域
   become: true
   shell: aws configure set region us-east-1
+
+- name: 為 Jenkins 使用者產生 .kube 目錄
+  file:
+    path: /var/lib/jenkins/.kube
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: '0700'
+
+- name: 為 ubuntu 與 jenkins 兩者都初始化 EKS 
+  shell: aws eks update-kubeconfig --region us-east-1 --name mini-finance-cluster
+  become_user: "{{ item.user }}"
+  environment:
+    HOME: "{{ item.home }}"
+  loop:
+    - { user: 'ubuntu', home: '/home/ubuntu' }
+    - { user: 'jenkins', home: '/var/lib/jenkins' }
+
+- name: 修正兩者的 API 版本相容性
+  replace:
+    path: "{{ item }}/.kube/config"
+    regexp: 'v1alpha1'
+    replace: 'v1beta1'
+  loop:
+    - "/home/ubuntu"
+    - "/var/lib/jenkins"
