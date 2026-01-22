@@ -29,11 +29,11 @@ pipeline {
                         echo "偵測到目前分支為: ${branch}"
                         // 重新定義邏輯
                         if (branch == 'main') {
-                            def mainTag = "v-${env.BUILD_NUMBER}"
-                            echo "執行 Main 分支流程: Tag 為 ${mainTag} 並更新 latest"
+                            env.DEPLOY_TAG = "v-${env.BUILD_NUMBER}"
+                            echo "執行 Main 分支流程: Tag 為 ${env.DEPLOY_TAG} 並更新 latest"
                     
-                            sh "docker build -t ${REPO_NAME}:${mainTag} ."
-                            sh "docker tag ${REPO_NAME}:${mainTag} ${ECR_REGISTRY}/${REPO_NAME}:${mainTag}"
+                            sh "docker build -t ${REPO_NAME}:${env.DEPLOY_TAG} ."
+                            sh "docker tag ${REPO_NAME}:${env.DEPLOY_TAG} ${ECR_REGISTRY}/${REPO_NAME}:${env.DEPLOY_TAG}"
                             sh "docker tag ${REPO_NAME}:${mainTag} ${ECR_REGISTRY}/${REPO_NAME}:latest"
 
                             sh "docker push ${ECR_REGISTRY}/${REPO_NAME}:${mainTag}"
