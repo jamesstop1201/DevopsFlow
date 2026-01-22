@@ -1,7 +1,11 @@
 ---
 - name: 安裝 Docker 必要套件
   apt:
-    name: ["apt-transport-https", "ca-certificates", "curl", "software-properties-common"]
+    name: 
+      - "apt-transport-https"
+      - "ca-certificates"
+      - "curl"
+      - "software-properties-common"
     update_cache: yes
 
 - name: 下載並安裝 Docker
@@ -25,3 +29,15 @@
   file:
     path: /var/run/docker.sock
     mode: '0666'  
+
+- name: 確保 jenkins 使用者在 docker 群組中
+  user:
+    name: jenkins
+    groups: docker
+    append: yes
+
+- name: 重新啟動 Jenkins 服務
+  service:
+    name: jenkins
+    state: restarted
+    enabled: yes

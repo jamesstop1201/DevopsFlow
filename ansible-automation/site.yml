@@ -5,5 +5,5 @@
   vars:
     aws_region: "us-east-1"
   roles:
-    - docker-setup
     - jenkins-init
+    - docker-setup
