@@ -70,6 +70,9 @@ pipeline {
                     
                     // 等待部署完成
                     sh "kubectl rollout status deployment/mini-finance-deploy"
+
+                    // 啟動 service
+                    sh "kubectl apply -f kubernetes-manifests/services/web-svc.yaml"
                 }
             }
         }
