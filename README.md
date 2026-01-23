@@ -1,33 +1,122 @@
-# DevopsFlow
+# DevOps Lifecycle實作
 
-**DevopsFlow** 是一個整合了 CI/CD 自動化流水線、基礎設施即程式碼 (IaC) 與容器化管理的 DevOps 實作專案。
-本專案旨在展示如何將軟體開發流程（從程式碼提交到部署）進行全自動化，以解決手動部署耗時且易錯的問題，並實現高可用性的雲端架構。
 
-##  專案簡介 (Introduction)
+## 📖 專案簡介 (Introduction)
+這是一個展示完整 DevOps Lifecycle 的專案。本專案透過 Infrastructure as Code (IaC) 與 CI/CD 流水線，在 AWS EKS 上構建一個具備高可用性、自動擴展與負載均衡能力的靜態網頁託管環境，展示了**從基礎設施到應用部署的完整 DevOps 實踐**。
 
-本專案實作了一套完整的 DevOps 解決方案，涵蓋以下核心能力：
-- **持續整合/持續部署 (CI/CD)**：使用 Jenkins 建立自動化流水線。
-- **容器化技術 (Containerization)**：利用 Docker 打包應用程式，確保環境一致性。
-- **容器編排 (Orchestration)**：使用 Kubernetes (EKS) 進行叢集管理與服務部署。
-- **基礎設施即程式碼 (IaC)**：透過 Terraform 自動化管理 AWS 雲端資源 (EC2, S3, VPC, EKS)。
+---
+## 🏗️ 系統架構 (System Architecture)
 
-本專案使用了以下工具與技術：
+### 雲端基礎設施 (Cloud Infrastructure)
 
-| 分類 | 工具/服務 | 用途 |
-| --- | --- | --- |
-| **CI/CD** | Jenkins, GitHub Actions | 自動化建置、測試與部署 |
-| **環境配置** | Ansible | **伺服器環境配置、套件安裝與自動化維運** |
-| **容器化** | Docker | 應用程式容器化 |
-| **部屬管理** | Kubernetes (Amazon EKS) | 容器自動化部署與管理 |
-| **IaC** | Terraform | AWS 基礎設施配置與狀態管理 |
-| **Cloud** | AWS (EC2, S3, VPC, RDS, ALB) | 雲端運算資源 |
-| **Scripting** | Bash Shell | 自動化腳本與工具 |
-| **Version Control** | Git, GitHub | 程式碼版本控制 |
+``` mermaid 
+graph TD
+    %% --- 樣式定義區 ---
+    %% AWS: 橘底白字
+    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white;
+    %% K8s: 藍底白字 (修正原本黑字看不清楚的問題)
+    classDef k8s fill:#326CE5,stroke:#fff,stroke-width:2px,color:white;
+    %% CICD: 深灰底白字
+    classDef cicd fill:#333,stroke:#fff,stroke-width:2px,color:white;
+    %% 外部: 淺灰底黑字
+    classDef ext fill:#ddd,stroke:#333,stroke-width:2px,color:black;
 
-##  架構流程 (Architecture)
+    %% --- 外部使用者 ---
+    Dev[Developer] -->|Push Code| Git[Git Repository]
+    User((End User)) -->|Visits URL| GD[GoDaddy DNS]
 
-1.  **Code Commit**: 開發者將程式碼推送到 GitHub。
-2.  **Build & Test**: Jenkins 觸發 Pipeline，執行單元測試與程式碼掃描。
-3.  **Package**: 建置 Docker Image 並推送到 Image Registry (Docker Hub/ECR)。
-4.  **Provision**: Terraform 檢查並更新 AWS 基礎設施 (EKS 叢集、網路配置等)。
-5.  **Deploy**: 透過 `kubectl` 或 Helm 將應用程式部署至 K8s 叢集。
+    %% --- CI/CD Pipeline 區塊 ---
+    subgraph CI_CD_Pipeline [CI/CD Pipeline]
+        direction TB
+        Git -->|Trigger| Jen[Jenkins Server]
+    end
+
+    %% --- AWS 雲端環境區塊 ---
+    subgraph AWS_Cloud [AWS Cloud Environment]
+        style AWS_Cloud fill:#f9f9f9,stroke:#FF9900,stroke-width:2px
+        
+        %% 將 ECR 移入 AWS 環境內，減少跨區塊長線條
+        Jen -->|Build & Push| ECR[(Amazon ECR)]
+        
+        %% EKS 叢集
+        subgraph EKS_Cluster [Amazon EKS Cluster]
+            style EKS_Cluster fill:#e6f2ff,stroke:#326CE5,stroke-dasharray: 5 5
+            
+            %% Control Plane 互動
+            Jen -->|kubectl apply| EKS_API[EKS API Server]
+            
+            %% 應用部署邏輯
+            EKS_API -->|Updates| Deploy[Deployment]
+            Deploy -->|Manages| Pods(Application Pods)
+            
+            %% HPA 迴圈 (放在側邊)
+            Metrics[Metrics Server] -.->|CPU Usage| HPA[Horiz. Pod Autoscaler]
+            HPA -->|Scale| Deploy
+            Pods -.->|Usage Data| Metrics
+
+            %% Ingress 邏輯
+            EKS_API -->|Create| Ingress[Ingress Resource]
+            LBC[AWS LB Controller] -.->|Watch| Ingress
+        end
+
+        %% 網路層 (與 EKS 互動)
+        LBC -->|Provision| ALB[AWS ALB]
+        R53[AWS Route 53] -->|Alias Record| ALB
+        ALB -->|Route Traffic| Pods
+        
+        %% 映像檔拉取 (線條現在變短了)
+        ECR -.->|Pull Image| Pods
+    end
+
+    %% --- 外部連接 ---
+    GD -->|Redirect| R5
+```
+
+> **架構說明**：
+> 本循環採用 **AWS EKS** 為核心，整合外部 DNS 與 CI/CD 自動化流程。
+> 架構邏輯分為以下三個部分：
+> #### 1. 🌐 流量存取與路由 (Traffic Flow)
+> 使用者的請求透過以下路徑進入系統，確保高可用性與安全性：
+> * **DNS 解析**：使用者存取 URL 時，首先經由 **GoDaddy** 解析，指引至 **AWS Route 53**。
+> * **負載平衡**：Route 53 將流量導向 **AWS Application Load Balancer (ALB)**。此 ALB 是由 K8s 內部的 **AWS Load Balancer Controller** 根據 Ingress 規則自動佈建與管理。
+> * **服務轉發**：ALB 根據路由規則將請求分發至 EKS Cluster 內的 **Application Pods** 進行處理。
+> 
+> #### 2. 🔄 CI/CD 自動化部署 (Continuous Deployment)
+> 從程式碼提交到上線，實現全自動化：
+> * 開發者推送到 **Git Repository** 後自動觸發 **Jenkins**。
+> * **Build & Push**：Jenkins 建置 Docker Image 並推送至 **Amazon ECR**。
+> * **Deploy**：Jenkins 透過 `kubectl` 指令與 **EKS API Server** 溝通，更新 Deployment 設定，觸發 Cluster 下載最新的 Image 並重啟 Pods。
+>
+> #### 3. 📈 彈性擴展與自動化管理 (Auto-scaling & Orchestration)
+> 為了應對流量波動，系統實作了自動擴展機制：
+> * **Metrics Server** 持續蒐集 Pods 的資源使用數據 (如 CPU/Memory)。
+> * **HPA (Horizontal Pod Autoscaler)** 根據監測到的數據判斷負載。當 CPU 使用率超過設定閾值時，自動通知 Deployment 增加 Pod 的副本數 (Replicas)，反之則縮減，實現真正的雲端彈性。
+
+---
+
+## 🛠️ 技術堆疊 (Tech Stack)
+
+| 領域 | 工具 | 專案中的具體實作與亮點 (Highlights) |
+| :--- | :--- | :--- |
+| **Cloud** | **AWS** | 採用生產級架構，規劃 **VPC 公私有子網**。EKS 叢集部署於私有子網，僅透過 NAT Gateway 連網。 |
+| **IaC** | **Terraform** | **基礎設施即程式碼**。從零開始佈建 VPC、EKS、ECR 及節點，並實作 State Locking 與 S3 儲存，確保環境一致性。 |
+| **Config** | **Ansible** | **自動化環境配置**。自動安裝 Jenkins 依賴，並自動處理 `kubeconfig` 權限轉移，解決 CI Server 存取 K8s 的痛點。 |
+| **Container** | **Docker** | **映像檔最佳化**。使用 Multi-stage Builds 技術，分離編譯與執行環境，顯著縮小 Image 體積並提升安全性。 |
+| **K8s** | **EKS** | **微服務調度**。解決 Pod 與 AWS 資源整合問題（如 ALB Controller），並配置 HPA 應對流量。 |
+| **CI/CD** | **Jenkins** | **全自動流水線**。撰寫 `Jenkinsfile` 串聯 Build、Push 到 Deploy 流程，實現 Code Commit 即部署的 GitOps 體驗。 |
+
+---
+
+## 🚀 核心功能與亮點 (Key Features)
+* **1. 基礎設施全自動化 (Infrastructure as Code)**
+    * 使用 Terraform 從零打造包含 VPC、Subnet 到 EKS 叢集的全套雲端環境，實現了「一行指令建立整個雲端機房」的可重複性與穩定性。
+
+* **2. 環境與權限自動配置 (Auto-Configuration)**
+    * 解決了手動設定伺服器最容易出錯的依賴問題。利用 Ansible 自動安裝所需套件，並自動處理 Jenkins 與 EKS 之間的權限認證 (kubeconfig)，讓 CI Server 能順暢地控制 K8s 叢集。
+
+* **3. Pipeline分流策略 (Multi-Branch Strategy)**
+    * 設計了多條 Pipeline 規則，將「開發分支 (Dev)」與「主線分支 (Main)」的流程完全隔離。這確保了測試階段的 Image 不會意外覆蓋掉生產環境的版本，避免了多人協作時常見的衝突。
+
+* **4. 端到端持續交付 (End-to-End Delivery)**
+    * 實現「Code Push 即上線」的自動化閉環。一旦偵測到新版本，系統自動接手後續所有工作：從 Docker Image 打包、上傳 ECR、更新 EKS Deployment 到重啟服務。
+
