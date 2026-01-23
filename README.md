@@ -12,64 +12,73 @@
 ``` mermaid 
 graph TD
     %% --- 樣式定義區 ---
-    %% AWS: 橘底白字
-    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white;
-    %% K8s: 藍底白字 (修正原本黑字看不清楚的問題)
-    classDef k8s fill:#326CE5,stroke:#fff,stroke-width:2px,color:white;
-    %% CICD: 深灰底白字
-    classDef cicd fill:#333,stroke:#fff,stroke-width:2px,color:white;
-    %% 外部: 淺灰底黑字
-    classDef ext fill:#ddd,stroke:#333,stroke-width:2px,color:black;
+    %% AWS Core: 橘底白字
+    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:#fff;
+    %% K8s Core: 藍底白字
+    classDef k8s fill:#326CE5,stroke:#fff,stroke-width:1px,color:#fff;
+    %% CI/CD: 灰色底
+    classDef cicd fill:#666,stroke:#fff,stroke-width:1px,color:#fff;
+    %% External: 白底黑字 (在深色模式也會強制顯示白底以保持清晰)
+    classDef ext fill:#ffffff,stroke:#333,stroke-width:1px,color:#333;
 
-    %% --- 外部使用者 ---
-    Dev[Developer] -->|Push Code| Git[Git Repository]
-    User((End User)) -->|Visits URL| GD[GoDaddy DNS]
+    %% --- 外部角色 ---
+    Dev[Developer] -->|Git Push| Git[GitHub]
+    User((End User)) -->|HTTPS| GD[GoDaddy]
 
-    %% --- CI/CD Pipeline 區塊 ---
-    subgraph CI_CD_Pipeline [CI/CD Pipeline]
+    Git -.->|Webhook| Jen
+
+    subgraph CI_CD_Pipeline [CI/CD Tools]
         direction TB
-        Git -->|Trigger| Jen[Jenkins Server]
+        Jen[Jenkins Server]
     end
 
     %% --- AWS 雲端環境區塊 ---
     subgraph AWS_Cloud [AWS Cloud Environment]
-        style AWS_Cloud fill:#f9f9f9,stroke:#FF9900,stroke-width:2px
+        %% 使用 Hex Code 修正 rgba 錯誤，#fff5e6 是極淺橘色
+        style AWS_Cloud fill:#fff5e6,stroke:#FF9900,stroke-width:2px,stroke-dasharray: 5 5
         
-        %% 將 ECR 移入 AWS 環境內，減少跨區塊長線條
-        Jen -->|Build & Push| ECR[(Amazon ECR)]
+        ECR[(Amazon ECR)]
         
         %% EKS 叢集
         subgraph EKS_Cluster [Amazon EKS Cluster]
-            style EKS_Cluster fill:#e6f2ff,stroke:#326CE5,stroke-dasharray: 5 5
+            %% #f0f7ff 是極淺藍色
+            style EKS_Cluster fill:#f0f7ff,stroke:#326CE5,stroke-width:2px
             
-            %% Control Plane 互動
-            Jen -->|kubectl apply| EKS_API[EKS API Server]
+            EKS_API[EKS API Server]
+            Deploy[Deployment]
+            Pods(Application Pods)
             
-            %% 應用部署邏輯
-            EKS_API -->|Updates| Deploy[Deployment]
-            Deploy -->|Manages| Pods(Application Pods)
-            
-            %% HPA 迴圈 (放在側邊)
-            Metrics[Metrics Server] -.->|CPU Usage| HPA[Horiz. Pod Autoscaler]
+            Metrics[Metrics Server] -.-> HPA[HPA]
             HPA -->|Scale| Deploy
-            Pods -.->|Usage Data| Metrics
-
-            %% Ingress 邏輯
-            EKS_API -->|Create| Ingress[Ingress Resource]
-            LBC[AWS LB Controller] -.->|Watch| Ingress
+            Deploy -->|Replicas| Pods
+            Ingress[Ingress Resource]
         end
 
-        %% 網路層 (與 EKS 互動)
-        LBC -->|Provision| ALB[AWS ALB]
-        R53[AWS Route 53] -->|Alias Record| ALB
-        ALB -->|Route Traffic| Pods
+        LBC[AWS LB Controller]
+        ALB[Application Load Balancer]
+        R53[Route 53]
+
+        %% 互動線條
+        Jen -->|1. Build & Push| ECR
+        Jen -->|2. kubectl apply| EKS_API
+        EKS_API --> Deploy
+        EKS_API --> Ingress
         
-        %% 映像檔拉取 (線條現在變短了)
         ECR -.->|Pull Image| Pods
+        
+        LBC -.->|Watch| Ingress
+        LBC -->|Provision| ALB
+        R53 -->|Alias Record| ALB
+        ALB -->|Forward| Pods
     end
 
-    %% --- 外部連接 ---
-    GD -->|Redirect| R5
+    GD -->|DNS| R53
+
+    %% --- 應用樣式 ---
+    class Dev,Git,GD,User ext;
+    class Jen cicd;
+    class ECR,ALB,R53,LBC aws;
+    class EKS_API,Deploy,Pods,HPA,Ingress,Metrics k8s;
 ```
 
 > **架構說明**：
