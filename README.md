@@ -129,3 +129,173 @@ graph TD
 * **4. 端到端持續交付 (End-to-End Delivery)**
     * 實現「Code Push 即上線」的自動化閉環。一旦偵測到新版本，系統自動接手後續所有工作：從 Docker Image 打包、上傳 ECR、更新 EKS Deployment 到重啟服務。
 
+---
+
+## 💻 快速開始 (Getting Started)
+
+### 前置需求 (Prerequisites)
+
+在開始部署之前，請確保你的執行環境 (Local Machine) 已安裝以下工具，並具備適當的雲端權限。
+
+---
+
+#### 1. 本地工具 (Local CLI Tools)
+* 本專案依賴以下工具進行自動化佈建，請確保版本符合要求：
+
+| 工具 | 最低版本要求 | 用途說明 |
+| :--- | :--- | :--- |
+
+---
+
+#### 2. 帳號與權限 (Accounts & Credentials)
+
+---
+
+#### 3. 環境變數設定 (Configuration)
+
+---
+
+## ⚡ 快速部署步驟 (Deployment Steps)
+
+### Step 1: 專案初始化 (Clone & Init)
+首先將專案下載至本地，並進入專案目錄。
+
+```bash
+git clone https://github.com/jamesstop1201/DevopsFlow.git
+cd DevopsFlow
+```
+
+### Step 2：佈建雲端基礎設施（Terraform）
+
+#### 2-1. 建立 Terraform Backend（S3 Bucket）
+
+目的：集中且安全地管理 Terraform state。
+
+```bash
+cd infra-terraform/management
+terraform init
+terraform plan
+terraform apply -auto-approve
+```
+
+**重要動作：**
+
+* Terraform 執行完成後，終端機會輸出一組 `bucket_name`，請複製該名稱
+* 編輯檔案 `infra-terraform/environments/dev/main.tf`
+* 將 bucket 名稱填入下列設定後，再進行下一步
+```hcl
+bucket = "<your_bucket_name>"
+```
+
+---
+
+#### 2-2. 佈建主要基礎設施（VPC / EKS / EC2）
+
+此步驟會建立 Jenkins Server 與 Kubernetes（EKS）叢集。
+
+```bash
+cd ../../infra-terraform/environments
+terraform init
+terraform plan
+terraform apply -auto-approve
+```
+
+Terraform 執行完成後，請記下以下輸出資訊（後續步驟會使用）：
+
+* `jenkins_server_public_ip`：Jenkins Server 公網 IP
+
+---
+
+### Step 3：自動化環境配置（Ansible）
+
+#### 3-1. 前置準備（Windows 使用者）
+
+Windows 原生不支援 Ansible，請使用 **WSL（Ubuntu）** 執行以下指令。
+
+```bash
+sudo apt update && sudo apt install ansible -y
+ansible --version
+```
+
+確認能正常顯示版本號，即表示安裝成功。
+
+---
+#### 3-2. 更新 Inventory 設定
+
+編輯檔案：
+
+```
+ansible-automation/inventory/hosts.ini
+```
+
+將 `[jenkins_server]` 底下的 IP，替換為 Terraform 輸出的 `jenkins_server_public_ip`。
+
+---
+
+#### 3-3. 執行 Playbook
+
+進入 Ansible 目錄並開始安裝 Jenkins 與相關依賴。
+
+```bash
+cd ansible-automation
+ansible-playbook -i inventory/hosts.ini site.yaml
+```
+
+若執行過程中沒有出現 `ERROR`，即代表安裝成功。
+
+---
+
+### Step 4：驗證安裝結果（Verification）
+
+#### 4-1. SSH 登入 Jenkins Server
+
+```bash
+ssh -i "key.pem" ubuntu@<jenkins_server_public_ip>
+```
+
+---
+
+#### 4-2. 驗證指令
+
+```bash
+sudo -u jenkins kubectl --version
+sudo -u ubuntu kubectl --version
+docker ps
+```
+
+---
+
+#### 成功標準
+
+* `kubectl --version` 能正常顯示版本號
+* `docker ps` 能正常執行（即使沒有容器）
+* 未出現 `Forbidden`、`Config not found` 等權限或設定錯誤
+
+符合以上條件，即代表自動化環境建置完成。
+
+---
+
+### Step 5: 設定 Jenkins (Jenkins Setup)
+
+最後，我們需要登入 Jenkins 網頁介面完成初始化設定，並建立第一條流水線。
+
+#### 5-1. 取得初始管理員密碼 (Unlock Jenkins)
+在本地終端機執行以下指令，直接從遠端抓取解鎖密碼：
+
+```bash
+# 請將 <key.pem> 與 <jenkins_ip> 替換為實際值
+ssh -i "key.pem" ubuntu@<jenkins_server_public_ip> "sudo cat /var/lib/jenkins/secrets/initialAdminPassword"
+複製終端機顯示的那串亂碼密碼。
+```
+
+#### 5-2. 網頁初始化 (Web Config)
+1. 開啟瀏覽器，前往：http://<jenkins_server_public_ip>:8080
+
+2. 貼上剛剛複製的密碼。
+
+3. 點選 "Install suggested plugins" (安裝建議套件)，等待安裝完成。
+
+4. Create Admin User: 設定你的個人帳號密碼 (Admin User)。
+
+5. 設定完成後，點擊 "Save and Finish" 進入 Jenkins 主頁。
+
