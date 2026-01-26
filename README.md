@@ -298,4 +298,67 @@ ssh -i "key.pem" ubuntu@<jenkins_server_public_ip> "sudo cat /var/lib/jenkins/se
 4. Create Admin User: 設定你的個人帳號密碼 (Admin User)。
 
 5. 設定完成後，點擊 "Save and Finish" 進入 Jenkins 主頁。
+   
+#### 5-3. github 建立 webhook
+1. 專案-Settings-Webhooks-Add webhook
+2. Payload URL 輸入： http://<你的-Jenkins-EC2-公有IP>:8080/github-webhook/
+3. Content type: 選擇 application/json
+4. Secret: 保持空白
+5. Active: 勾選
+   
+#### 5-4. 建立 Multibranch Pipeline
+***為了支援多分支開發 (Git Flow)，我們將建立一個多分支流水線。***
 
+1. 點擊左側選單的 "New Item" (新增作業)。
+
+2. 輸入專案名稱 mini-fiance-ci。
+
+3. 選擇 "Multibranch Pipeline" (多分支流水線)，並點擊 OK。
+
+4. Branch Sources (分支來源):
+
+* 點選 "Add source" -> 選擇 "GitHub"。
+
+* Repository HTTPS URL: 貼上本專案的 GitHub URL (例如: https://github.com/jamesstop1201/DevopsFlow.git)。
+
+5. 點擊 "Save" (儲存)。
+   * Save 之後預設會在每個branch 跑一次 Jenkinsfile ，可以在 jenkins網頁上看到跑的結果及LOG
+  **自動觸發: 儲存後，Jenkins 會自動掃描該 Repo 的所有分支。如果偵測到 `Jenkinsfile`，它就會自動觸發第一次 Build。**
+
+### Step 6: 觸發流水線 (Trigger Pipeline)
+
+本專案採用 **Git Flow** 分流策略，不同分支對應不同的流水線行為：
+
+* **`dev` 分支 (CI Only)**：僅執行建置 (Build) 與測試，並將 Docker Image 推送到 ECR，**不會**部署到 EKS。
+* **`main` 分支 (CI + CD)**：完整流程。除了推送 ECR 之外，會包含 **Deploy** 階段，將靜態網頁平台正式部署至 EKS 叢集。
+
+若要驗證應用程式是否成功上線至 K8s，請確保程式碼已推送到 `main` 分支：
+
+```bash
+# 1. 切換至 main 分支
+git checkout main
+
+# 2. 隨意修改一個檔案或合併 dev 分支
+# (例如：git merge dev)
+
+# 3. 推送至 GitHub (這將觸發 Jenkins 的 Deploy 邏輯)
+git push origin main
+```
+回到 Jenkins Dashboard，你會看到 `main` 分支的 Pipeline 開始執行，並在最後多出一個 **Deploy** 階段。待執行顯示綠燈後，即可透過 Load Balancer URL 存取網頁。
+
+#### 取得Load Balancer URL
+
+執行 `kubectl get svc` 會看到 URL。
+
+指令：
+
+```bash
+kubectl get svc mini-finance-service
+```
+輸出範例：
+```hcl
+
+NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                            PORT(S)        AGE
+mini-finance-service   LoadBalancer   10.100.200.50   xxxxxx.us-east-1.elb.amazonaws.com   80:31234/TCP   5m
+這裡的 EXTERNAL-IP 就是你的 Load Balancer URL。
+```
