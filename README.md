@@ -325,14 +325,16 @@ ssh -i "key.pem" ubuntu@<jenkins_server_public_ip> "sudo cat /var/lib/jenkins/se
    * Save 之後預設會在每個branch 跑一次 Jenkinsfile ，可以在 jenkins網頁上看到跑的結果及LOG
   **自動觸發: 儲存後，Jenkins 會自動掃描該 Repo 的所有分支。如果偵測到 `Jenkinsfile`，它就會自動觸發第一次 Build。**
 
+---
+
 ### Step 6: 觸發流水線 (Trigger Pipeline)
 
-本專案採用 **Git Flow** 分流策略，不同分支對應不同的流水線行為：
+1. 本專案採用 **Git Flow** 分流策略，不同分支對應不同的流水線行為：
+   
+   * **`dev` 分支 (CI Only)**：僅執行建置 (Build) 與測試，並將 Docker Image 推送到 ECR，**不會**部署到 EKS。
+   * **`main` 分支 (CI + CD)**：完整流程。除了推送 ECR 之外，會包含 **Deploy** 階段，將靜態網頁平台正式部署至 EKS 叢集。
 
-* **`dev` 分支 (CI Only)**：僅執行建置 (Build) 與測試，並將 Docker Image 推送到 ECR，**不會**部署到 EKS。
-* **`main` 分支 (CI + CD)**：完整流程。除了推送 ECR 之外，會包含 **Deploy** 階段，將靜態網頁平台正式部署至 EKS 叢集。
-
-若要驗證應用程式是否成功上線至 K8s，請確保程式碼已推送到 `main` 分支：
+2. 若要驗證應用程式是否成功上線至 K8s，請確保程式碼已推送到 `main` 分支：
 
 ```bash
 # 1. 切換至 main 分支
@@ -344,13 +346,12 @@ git checkout main
 # 3. 推送至 GitHub (這將觸發 Jenkins 的 Deploy 邏輯)
 git push origin main
 ```
-回到 Jenkins Dashboard，你會看到 `main` 分支的 Pipeline 開始執行，並在最後多出一個 **Deploy** 階段。待執行顯示綠燈後，即可透過 Load Balancer URL 存取網頁。
+
+3. 回到 Jenkins Dashboard，你會看到 `main` 分支的 Pipeline 開始執行，並在最後多出一個 **Deploy** 階段。待執行顯示綠燈後，即可透過 Load Balancer URL 存取網頁。
 
 #### 取得Load Balancer URL
 
-執行 `kubectl get svc` 會看到 URL。
-
-指令：
+執行指令：
 
 ```bash
 kubectl get svc mini-finance-service
@@ -361,4 +362,47 @@ kubectl get svc mini-finance-service
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                            PORT(S)        AGE
 mini-finance-service   LoadBalancer   10.100.200.50   xxxxxx.us-east-1.elb.amazonaws.com   80:31234/TCP   5m
 這裡的 EXTERNAL-IP 就是你的 Load Balancer URL。
+```
+
+---
+
+## 🧹 專案清理 (Clean Up)
+
+為了避免產生額外的 AWS 費用，測試完畢後請務必依照以下順序銷毀資源。
+
+### Step 1: 清除應用層資源 (Jenkins Server)
+請先 SSH 進入 **Jenkins Server**，執行以下指令來清空 Kubernetes 資源與 ECR 映像檔。
+*(這是為了防止 Terraform 因 ECR 非空或 Load Balancer 未釋放而導致銷毀失敗)*
+
+```bash
+# 1. SSH 進入 Jenkins Server
+ssh -i "your-key.pem" ubuntu@<jenkins_ip>
+
+# 刪除 K8s 內的服務與負載平衡器 (這會觸發 AWS 刪除 ALB)
+kubectl delete svc --all
+
+# 刪除所有部署與相關資源
+kubectl delete pvc,deployments,statefulsets,daemonsets,jobs --all
+
+# 強制清空 ECR 內的所有 Images (Terraform 無法刪除有內容的 Repo)
+aws ecr batch-delete-image \
+    --repository-name mini-finance-ecr \
+    --image-ids "$(aws ecr list-images --repository-name mini-finance-ecr --query 'imageIds[*]' --output json)"
+```
+
+### Step 2: 銷毀雲端基礎設施 (Local Machine)
+回到你的本機電腦，依照順序由外而內銷毀基礎設施。
+
+1. 銷毀主要環境 (EKS, VPC, EC2)
+
+```Bash
+cd infra-terraform/environments/dev
+terraform destroy -auto-approve
+```
+2. 銷毀狀態管理後端 (S3 Bucket) (注意：執行此步驟後，Terraform State 將會遺失)
+
+```Bash
+cd ../../infra-terraform/management
+terraform destroy -auto-approve
+⚠️ 注意： terraform destroy 執行時間較長 (約 15-20 分鐘)，請勿中斷終端機連線，直到出現 Destroy complete! 訊息為止。
 ```
