@@ -2,7 +2,8 @@
 
 
 ## 📖 專案簡介 (Introduction)
-這是一個展示完整 DevOps Lifecycle 的專案。本專案透過 Infrastructure as Code (IaC) 與 CI/CD 流水線，在 AWS EKS 上構建一個具備高可用性、自動擴展與負載均衡能力的靜態網頁託管環境，展示了**從基礎設施到應用部署的完整 DevOps 實踐**。
+這是一個展示完整 DevOps Lifecycle 的專案。
+透過 Infrastructure as Code (IaC) 與 CI/CD 流水線，在 AWS EKS 上構建一個具備高可用性、自動擴展與負載均衡能力的靜態網頁託管環境，展示了**從基礎設施到應用部署的完整 DevOps 實踐**。
 
 ---
 ## 🏗️ 系統架構 (System Architecture)
@@ -23,7 +24,7 @@ graph TD
 
     %% --- 外部角色 ---
     Dev[Developer] -->|Git Push| Git[GitHub]
-    User((End User)) -->|HTTPS| GD[GoDaddy]
+%%     User((End User)) -->|HTTPS| GD[GoDaddy]
 
     Git -.->|Webhook| Jen
 
@@ -56,7 +57,7 @@ graph TD
 
         LBC[AWS LB Controller]
         ALB[Application Load Balancer]
-        R53[Route 53]
+      %%   R53[Route 53]
 
         %% 互動線條
         Jen -->|1. Build & Push| ECR
@@ -68,11 +69,11 @@ graph TD
         
         LBC -.->|Watch| Ingress
         LBC -->|Provision| ALB
-        R53 -->|Alias Record| ALB
+      %%   R53 -->|Alias Record| ALB
         ALB -->|Forward| Pods
     end
 
-    GD -->|DNS| R53
+%%     GD -->|DNS| R53
 
     %% --- 應用樣式 ---
     class Dev,Git,GD,User ext;
@@ -86,7 +87,6 @@ graph TD
 > 架構邏輯分為以下三個部分：
 > #### 1. 🌐 流量存取與路由 (Traffic Flow)
 > 使用者的請求透過以下路徑進入系統，確保高可用性與安全性：
-> * **DNS 解析**：使用者存取 URL 時，首先經由 **GoDaddy** 解析，指引至 **AWS Route 53**。
 > * **負載平衡**：Route 53 將流量導向 **AWS Application Load Balancer (ALB)**。此 ALB 是由 K8s 內部的 **AWS Load Balancer Controller** 根據 Ingress 規則自動佈建與管理。
 > * **服務轉發**：ALB 根據路由規則將請求分發至 EKS Cluster 內的 **Application Pods** 進行處理。
 > 
@@ -118,10 +118,10 @@ graph TD
 
 ## 🚀 核心功能與亮點 (Key Features)
 * **1. 基礎設施全自動化 (Infrastructure as Code)**
-    * 使用 Terraform 從零打造包含 VPC、Subnet 到 EKS 叢集的全套雲端環境，實現了「一行指令建立整個雲端機房」的可重複性與穩定性。
+    * 使用 Terraform 從零打造包含 VPC、Subnet 到 EKS 叢集的全套雲端環境，實現了「**一行指令建立整個雲端機房**」的可重複性與穩定性。
 
 * **2. 環境與權限自動配置 (Auto-Configuration)**
-    * 解決了手動設定伺服器最容易出錯的依賴問題。利用 Ansible 自動安裝所需套件，並自動處理 Jenkins 與 EKS 之間的權限認證 (kubeconfig)，讓 CI Server 能順暢地控制 K8s 叢集。
+    * 解決了手動設定伺服器最容易出錯的依賴問題。利用 Ansible 「**自動安裝所需套件，並自動處理 Jenkins 與 EKS 之間的權限認證**」 (kubeconfig)，讓 CI Server 能順暢地控制 K8s 叢集。
 
 * **3. Pipeline分流策略 (Multi-Branch Strategy)**
     * 設計了多條 Pipeline 規則，將「開發分支 (Dev)」與「主線分支 (Main)」的流程完全隔離。這確保了測試階段的 Image 不會意外覆蓋掉生產環境的版本，避免了多人協作時常見的衝突。
