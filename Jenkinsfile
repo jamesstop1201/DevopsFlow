@@ -64,13 +64,12 @@ pipeline {
                     
                     // 套用 K8s 設定
                     sh "kubectl apply -f kubernetes-manifests/deployments/web-deploy.yaml"
-                    
                     // 滾動更新 Image
                     sh "kubectl set image deployment/mini-finance-deploy mini-finance=${fullImageUri}"
-                    
                     // 等待部署完成
                     sh "kubectl rollout status deployment/mini-finance-deploy"
-
+                    // 啟動 Ingress
+                    sh "kubectl apply -f kubernetes-manifests/ingress/web-ingress.yaml"
                     // 啟動 service
                     sh "kubectl apply -f kubernetes-manifests/services/web-service.yaml"
                 }

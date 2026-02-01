@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: mini-finance-service
 spec:
-  type: LoadBalancer  # 這會觸發 AWS 建立 ALB
+  type: LoadBalancer  # 觸發 AWS 建立 ALB
   selector:
     app: mini-finance # 必須與 Deployment 的 label 一致
   ports:

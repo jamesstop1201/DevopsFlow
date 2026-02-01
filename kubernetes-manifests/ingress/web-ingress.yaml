@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   name: mini-finance-ingress
   annotations:
-    # 這是關鍵：告訴 EKS 使用 AWS Load Balancer Controller 來建立 ALB
+    # 告訴 EKS 使用 AWS Load Balancer Controller 來建立 ALB
     spec.ingressClassName: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
@@ -15,6 +15,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: mini-finance-service # 必須對應你的 Service 名稱
+            name: mini-finance-service # 對應你的 Service 名稱
             port:
               number: 80 # Service 的 Port
