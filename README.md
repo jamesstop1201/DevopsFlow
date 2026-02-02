@@ -11,75 +11,43 @@
 ### 雲端基礎設施 (Cloud Infrastructure)
 
 ``` mermaid 
-graph TD
-    %% --- 樣式定義區 ---
-    %% AWS Core: 橘底白字
-    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:#fff;
-    %% K8s Core: 藍底白字
-    classDef k8s fill:#326CE5,stroke:#fff,stroke-width:1px,color:#fff;
-    %% CI/CD: 灰色底
-    classDef cicd fill:#666,stroke:#fff,stroke-width:1px,color:#fff;
-    %% External: 白底黑字 (在深色模式也會強制顯示白底以保持清晰)
-    classDef ext fill:#ffffff,stroke:#333,stroke-width:1px,color:#333;
+flowchart LR
+ subgraph STAGE_1["1. CI Build 持續整合"]
+    direction TB
+        Git["GitHub"]
+        Dev["Dev"]
+        Jen["Jenkins"]
+        ECR[("Amazon ECR")]
+  end
+ subgraph STAGE_2["2. CD Deploy 持續部署"]
+    direction TB
+        EKS_API["EKS"]
+        Deploy["部署控制器 Deployment"]
+  end
+ subgraph STAGE_3["3. Runtime & Traffic 運行監控"]
+    direction TB
+        Pods["應用程式容器 Pods"]
+        ALB["AWS ALB 負載平衡"]
+        HPA["自動伸縮 HPA"]
+        Metrics["Metrics"]
+  end
+    Dev -- Git Push --> Git
+    Git -. 自動觸發 Webhook .-> Jen
+    Jen -- Build & Push --> ECR
+    Jen -- 部署指令 kubectl apply --> EKS_API
+    EKS_API --> Deploy
+    Deploy -- Pull Image --> ECR
+    ALB -- 轉發流量 Forward --> Pods
+    HPA -- 動態增減 Auto Scale --> Deploy
+    Metrics -. 數據監控 Monitor .-> HPA
+    Deploy --> Pods
+    Ingress["路由規則 Ingress"] -. 自動建立 Provision .-> ALB
 
-    %% --- 外部角色 ---
-    Dev[Developer] -->|Git Push| Git[GitHub]
-%%     User((End User)) -->|HTTPS| GD[GoDaddy]
-
-    Git -.->|Webhook| Jen
-
-    subgraph CI_CD_Pipeline [CI/CD Tools]
-        direction TB
-        Jen[Jenkins Server]
-    end
-
-    %% --- AWS 雲端環境區塊 ---
-    subgraph AWS_Cloud [AWS Cloud Environment]
-        %% 使用 Hex Code 修正 rgba 錯誤，#fff5e6 是極淺橘色
-        style AWS_Cloud fill:#fff5e6,stroke:#FF9900,stroke-width:2px,stroke-dasharray: 5 5
-        
-        ECR[(Amazon ECR)]
-        
-        %% EKS 叢集
-        subgraph EKS_Cluster [Amazon EKS Cluster]
-            %% #f0f7ff 是極淺藍色
-            style EKS_Cluster fill:#f0f7ff,stroke:#326CE5,stroke-width:2px
-            
-            EKS_API[EKS API Server]
-            Deploy[Deployment]
-            Pods(Application Pods)
-            
-            Metrics[Metrics Server] -.-> HPA[HPA]
-            HPA -->|Scale| Deploy
-            Deploy -->|Replicas| Pods
-            Ingress[Ingress Resource]
-        end
-
-        LBC[AWS LB Controller]
-        ALB[Application Load Balancer]
-      %%   R53[Route 53]
-
-        %% 互動線條
-        Jen -->|1. Build & Push| ECR
-        Jen -->|2. kubectl apply| EKS_API
-        EKS_API --> Deploy
-        EKS_API --> Ingress
-        
-        ECR -.->|Pull Image| Pods
-        
-        LBC -.->|Watch| Ingress
-        LBC -->|Provision| ALB
-      %%   R53 -->|Alias Record| ALB
-        ALB -->|Forward| Pods
-    end
-
-%%     GD -->|DNS| R53
-
-    %% --- 應用樣式 ---
-    class Dev,Git,GD,User ext;
-    class Jen cicd;
-    class ECR,ALB,R53,LBC aws;
-    class EKS_API,Deploy,Pods,HPA,Ingress,Metrics k8s;
+     ECR:::storage
+    classDef build fill:#f9f9f9,stroke:#666,stroke-width:2px
+    classDef storage fill:#fff5e6,stroke:#FF9900,stroke-width:2px
+    classDef cluster fill:#f0f7ff,stroke:#326CE5,stroke-width:2px
+    classDef traffic fill:#e6fffa,stroke:#00b5ad,stroke-width:2px
 ```
 
 > **架構說明**：
