@@ -25,7 +25,15 @@ pipeline {
             steps {
                 script { 
                     dir('docker/app'){
-                        def branch = env.BRANCH_NAME ?: "unknown"
+                        def branch
+                        if (env.BRANCH_NAME != null && env.BRANCH_NAME != "") {
+                            branch = env.BRANCH_NAME
+                            } 
+                        else {
+                            branch = "unknown"
+                            }
+                        
+                        // def branch = env.BRANCH_NAME ?: "unknown"
                         echo "偵測到目前分支為: ${branch}"
                         if (branch == 'main') {
                             env.DEPLOY_TAG = "v-${env.BUILD_NUMBER}"
